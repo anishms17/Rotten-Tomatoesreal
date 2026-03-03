@@ -192,14 +192,85 @@
 
   @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
+  /* TABLET */
   @media (max-width: 900px) {
-    .hero { grid-template-columns: 1fr; gap: 2.5rem; }
+    .hero { grid-template-columns: 1fr; gap: 2rem; padding: 3rem 1.5rem 2.5rem; }
     .write-form { grid-template-columns: 1fr; }
     .form-group.full, .score-slider-group, .form-submit { grid-column: 1; }
-    .stats-bar { flex-wrap: wrap; gap: 1.5rem; }
-    .stat-item { border-right: none; padding: 0 2rem; }
-    .tab { padding: 1rem 0.85rem; font-size: 0.68rem; }
+    .stats-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; }
+    .stat-item { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 1.5rem 1rem; }
+    .stat-item:nth-child(2) { border-right: none; }
+    .stat-item:nth-child(3) { border-bottom: none; }
+    .stat-item:nth-child(4) { border-right: none; border-bottom: none; }
+    .stat-number { font-size: 2rem; }
     .top50-item { gap: 1rem; }
+    .top50-wrap { padding: 0 1.5rem 4rem; }
+    .section-wrap { padding: 0 1.5rem; }
+    .search-bar { padding: 0 1.5rem 2rem; }
+    .write-section { padding: 3rem 1.5rem 4rem; }
+  }
+
+  .mobile-nav { display: none; }
+
+  /* MOBILE */
+  @media (max-width: 600px) {
+    header { padding: 0 1rem; height: 60px; }
+    .logo-text { font-size: 1.2rem; }
+    .logo-icon { width: 34px; height: 34px; }
+    nav { display: none; }
+    .mobile-nav {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(15,14,10,0.97); border-top: 1px solid var(--border);
+      z-index: 150; backdrop-filter: blur(12px);
+    }
+    .mobile-nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 0.55rem 0.2rem; gap: 0.2rem;
+      background: none; border: none; color: var(--muted);
+      font-family: 'Space Mono', monospace; font-size: 0.52rem;
+      letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer;
+      transition: color 0.2s; line-height: 1.2;
+    }
+    .mobile-nav-btn .mnicon { font-size: 1.15rem; line-height: 1; margin-bottom: 0.1rem; }
+    .mobile-nav-btn.active { color: var(--gold); }
+    body { padding-bottom: 70px; }
+    .hero { padding: 2rem 1rem 1.5rem; gap: 1.25rem; }
+    .hero h1 { font-size: 1.9rem; }
+    .hero p { font-size: 0.92rem; margin-bottom: 1.25rem; }
+    .hero-actions { flex-direction: column; gap: 0.6rem; }
+    .btn-primary, .btn-ghost { width: 100%; text-align: center; padding: 0.75rem 1rem; font-size: 0.75rem; }
+    .featured-card { display: none; }
+    .stats-bar { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 2rem; }
+    .stat-number { font-size: 1.75rem; }
+    .stat-label { font-size: 0.58rem; }
+    .search-bar { padding: 0 1rem 1.5rem; }
+    .section-wrap { padding: 0 1rem; }
+    .tabs-header { margin-bottom: 1.25rem; }
+    .tab { padding: 0.8rem 0.7rem; font-size: 0.62rem; letter-spacing: 0.03em; }
+    .cards-grid { grid-template-columns: 1fr; gap: 1rem; margin-bottom: 2.5rem; }
+    .card-thumb { height: 150px; }
+    .card-content { padding: 1rem; }
+    .card-content .card-title { font-size: 1rem; }
+    .top50-wrap { padding: 0 1rem 4rem; }
+    .top50-header { margin-top: 1.5rem; margin-bottom: 1.25rem; }
+    .top50-title { font-size: 1.6rem; }
+    .top50-item { padding: 0.8rem 0.875rem; gap: 0.75rem; }
+    .top50-rank { font-size: 1rem; min-width: 1.75rem; }
+    .top50-img { width: 44px; height: 44px; }
+    .top50-name { font-size: 0.88rem; }
+    .top50-artist { font-size: 0.72rem; }
+    .top50-score { font-size: 0.8rem; padding: 0.2rem 0.5rem; }
+    .write-section { padding: 1.5rem 1rem 3rem; }
+    .write-form { padding: 1.25rem; gap: 1.25rem; }
+    .section-heading { font-size: 1.5rem; }
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    .modal { max-height: 88vh; border-left: none; border-right: none; border-bottom: none; }
+    .modal-title { font-size: 1.25rem; }
+    .big-score { font-size: 2.75rem; }
+    .modal-body { padding: 1.25rem; }
+    .modal-header { padding: 1.25rem; }
+    footer { flex-direction: column; gap: 1rem; text-align: center; padding: 1.5rem 1rem; }
+    .footer-links { gap: 1rem; flex-wrap: wrap; justify-content: center; }
   }
 </style>
 </head>
@@ -363,6 +434,25 @@
     </div>
   </div>
 </div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav">
+  <button class="mobile-nav-btn active" id="mnav-home" onclick="showPage('home')">
+    <span class="mnicon">🏠</span>Home
+  </button>
+  <button class="mobile-nav-btn" id="mnav-reviews" onclick="showPage('reviews')">
+    <span class="mnicon">⭐</span>Reviews
+  </button>
+  <button class="mobile-nav-btn" id="mnav-music50" onclick="showPage('music50')">
+    <span class="mnicon">🎵</span>Music 50
+  </button>
+  <button class="mobile-nav-btn" id="mnav-tv50" onclick="showPage('tv50')">
+    <span class="mnicon">📺</span>TV 50
+  </button>
+  <button class="mobile-nav-btn" id="mnav-write" onclick="showPage('write')">
+    <span class="mnicon">✏️</span>Review
+  </button>
+</nav>
 
 <footer>
   <div class="footer-logo">Rotten <span>Potatoes</span></div>
@@ -662,9 +752,12 @@
     currentPage = page;
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.mobile-nav-btn').forEach(n => n.classList.remove('active'));
     document.getElementById('page-' + page).classList.add('active');
     const navEl = document.getElementById('nav-' + page);
     if (navEl) navEl.classList.add('active');
+    const mnavEl = document.getElementById('mnav-' + page);
+    if (mnavEl) mnavEl.classList.add('active');
     window.scrollTo(0, 0);
 
     if (page === 'reviews') renderCards();
