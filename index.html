@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rotten Potatoes</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0a;
+    --surface: #1a1814;
+    --surface2: #252219;
+    --gold: #d4a72c;
+    --gold-light: #e8c04a;
+    --rot: #7ab648;
+    --fresh: #ff6b35;
+    --text: #f0ead6;
+    --muted: #8a8070;
+    --border: #2e2a1f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  /* Burned orange to black gradient fixed behind everything */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(to bottom, #7a2800 0%, #3d1200 30%, #0f0e0a 70%);
+    z-index: -1;
+    pointer-events: none;
+  }
+  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 9999; opacity: 0.5; }
+
+  header { border-bottom: 1px solid var(--border); padding: 0 2.5rem; position: sticky; top: 0; background: rgba(15,14,10,0.92); backdrop-filter: blur(12px); z-index: 100; display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .logo-icon { width: 44px; height: 44px; }
+  .logo-text { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+  .logo-text span { color: var(--gold); }
+  nav { display: flex; align-items: center; gap: 2rem; }
+  nav a { color: var(--muted); text-decoration: none; font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; }
+  nav a:hover, nav a.active { color: var(--gold); }
+  .nav-btn { background: var(--gold); color: var(--bg) !important; padding: 0.5rem 1.25rem; font-weight: 700; }
+  .nav-btn:hover { background: var(--gold-light) !important; }
+
+  .hero { padding: 5rem 2.5rem 4rem; max-width: 1300px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+  .hero-label { font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+  .hero-label::before { content: ''; display: block; width: 24px; height: 1px; background: var(--gold); }
+  .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 1.5rem; }
+  .hero h1 em { font-style: italic; color: var(--gold); }
+  .hero p { color: var(--muted); font-size: 1.05rem; line-height: 1.7; max-width: 480px; margin-bottom: 2.5rem; }
+  .hero-actions { display: flex; gap: 1rem; align-items: center; }
+  .btn-primary { background: var(--gold); color: var(--bg); border: none; padding: 0.875rem 2rem; font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+  .btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 0.875rem 2rem; font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+  .featured-card { background: var(--surface); border: 1px solid var(--border); position: relative; overflow: hidden; animation: fadeSlideUp 0.8s ease both; animation-delay: 0.3s; }
+  .featured-card::before { content: 'FEATURED'; position: absolute; top: 1.25rem; right: 1.25rem; font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; background: var(--gold); color: var(--bg); padding: 0.3rem 0.6rem; font-weight: 700; z-index: 2; }
+  .featured-img-placeholder { width: 100%; height: 260px; background: linear-gradient(135deg, #1f1a0e 0%, #141e0e 100%); display: flex; align-items: center; justify-content: center; font-size: 5rem; }
+  .featured-body { padding: 1.75rem; }
+  .card-type { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--fresh); margin-bottom: 0.75rem; }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.2; }
+  .card-meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
+  .card-excerpt { color: var(--muted); font-size: 0.9rem; line-height: 1.65; margin-bottom: 1.25rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .score-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.85rem; font-family: 'Space Mono', monospace; font-size: 0.85rem; font-weight: 700; }
+  .score-fresh { background: rgba(122,182,72,0.15); color: var(--rot); border: 1px solid rgba(122,182,72,0.3); }
+
+  .stats-bar { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 2rem 2.5rem; margin-bottom: 4rem; display: flex; justify-content: center; }
+  .stat-item { text-align: center; padding: 0 3.5rem; border-right: 1px solid var(--border); }
+  .stat-item:last-child { border-right: none; }
+  .stat-number { font-family: 'Playfair Display', serif; font-size: 2.5rem; font-weight: 900; color: var(--gold); line-height: 1; margin-bottom: 0.4rem; }
+  .stat-label { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+
+  .search-bar { max-width: 1300px; margin: 0 auto; padding: 0 2.5rem 3rem; }
+  .search-inner { display: flex; border: 1px solid var(--border); background: var(--surface); overflow: hidden; transition: border-color 0.2s; }
+  .search-inner:focus-within { border-color: var(--gold); }
+  .search-inner input { flex: 1; background: transparent; border: none; padding: 0.875rem 1.25rem; font-size: 0.95rem; color: var(--text); outline: none; font-family: 'DM Sans', sans-serif; }
+  .search-btn { background: var(--gold); border: none; color: var(--bg); padding: 0 1.5rem; font-family: 'Space Mono', monospace; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+  .search-btn:hover { background: var(--gold-light); }
+
+  .section-tabs { max-width: 1300px; margin: 0 auto; padding: 0 2.5rem; }
+  .tabs-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 2.5rem; border-bottom: 1px solid var(--border); }
+  .tabs { display: flex; }
+  .tab { font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: none; border: none; padding: 1rem 1.5rem; cursor: pointer; position: relative; transition: color 0.2s; }
+  .tab::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--gold); transform: scaleX(0); transition: transform 0.2s; }
+  .tab.active { color: var(--text); }
+  .tab.active::after { transform: scaleX(1); }
+  .tab:hover { color: var(--text); }
+
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 5rem; min-height: 200px; }
+  .review-card { background: var(--surface); border: 1px solid var(--border); transition: all 0.3s ease; cursor: pointer; animation: fadeSlideUp 0.6s ease both; }
+  .review-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
+  .card-thumb { width: 100%; height: 180px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; position: relative; overflow: hidden; }
+  .card-thumb-songs { background: linear-gradient(135deg, #1a0f2e 0%, #2e1a0f 100%); }
+  .card-thumb-tv { background: linear-gradient(135deg, #0f1a2e 0%, #1a2e0f 100%); }
+  .card-score { position: absolute; top: 0.75rem; left: 0.75rem; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.8rem; }
+  .score-high { background: var(--rot); color: #0a1f0a; }
+  .score-mid { background: #c8a020; color: #1a1000; }
+  .score-low { background: var(--fresh); color: #1f0a00; }
+  .card-content { padding: 1.25rem; }
+  .card-content .card-title { font-size: 1.15rem; margin-bottom: 0.3rem; }
+  .card-artist { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 0.75rem; }
+  .card-reviewer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .reviewer-name { font-size: 0.8rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .review-date { font-size: 0.75rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  .loading-state { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; color: var(--muted); gap: 1rem; }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.1em; }
+
+  .write-review-section { max-width: 1300px; margin: 0 auto 5rem; padding: 0 2.5rem; }
+  .section-heading { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; margin-bottom: 2rem; }
+  .section-heading span { color: var(--gold); }
+  .write-form { background: var(--surface); border: 1px solid var(--border); padding: 2.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  input, select, textarea { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.875rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; width: 100%; appearance: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 120px; }
+  .score-slider-group { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.75rem; }
+  .slider-row { display: flex; align-items: center; gap: 1rem; }
+  input[type=range] { flex: 1; height: 4px; padding: 0; accent-color: var(--gold); cursor: pointer; }
+  .slider-value { font-family: 'Space Mono', monospace; font-size: 1.1rem; font-weight: 700; color: var(--gold); min-width: 48px; text-align: right; }
+  .form-submit { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 1rem; }
+  .submit-status { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; padding: 2rem; backdrop-filter: blur(4px); }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; animation: fadeSlideUp 0.3s ease; }
+  .modal-header { padding: 2rem 2rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .modal-subtitle { color: var(--muted); font-style: italic; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; line-height: 1; transition: color 0.2s; }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 2rem; }
+  .modal-score-row { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.75rem; padding-bottom: 1.75rem; border-bottom: 1px solid var(--border); }
+  .big-score { font-family: 'Playfair Display', serif; font-size: 4rem; font-weight: 900; line-height: 1; }
+  .big-score.fresh { color: var(--rot); }
+  .big-score.rotten { color: var(--fresh); }
+  .score-verdict { font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; }
+  .score-verdict.fresh { color: var(--rot); }
+  .score-verdict.rotten { color: var(--fresh); }
+  .modal-review-text { color: var(--muted); line-height: 1.8; font-size: 0.95rem; margin-bottom: 1.5rem; }
+  .modal-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .tag { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); padding: 0.3rem 0.65rem; }
+
+  .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--surface); border: 1px solid var(--gold); color: var(--text); padding: 1rem 1.5rem; font-family: 'Space Mono', monospace; font-size: 0.8rem; z-index: 300; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  footer { border-top: 1px solid var(--border); padding: 3rem 2.5rem; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 0.85rem; }
+  .footer-logo { font-family: 'Playfair Display', serif; font-size: 1.25rem; font-weight: 900; color: var(--text); }
+  .footer-logo span { color: var(--gold); }
+  .footer-links { display: flex; gap: 2rem; }
+  .footer-links a { color: var(--muted); text-decoration: none; font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--gold); }
+
+  @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .hero > * { animation: fadeSlideUp 0.7s ease both; }
+  .hero > *:nth-child(2) { animation-delay: 0.15s; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 2.5rem; }
+    .write-form { grid-template-columns: 1fr; }
+    .form-group.full, .score-slider-group, .form-submit { grid-column: 1; }
+    .stats-bar { flex-wrap: wrap; gap: 1.5rem; }
+    .stat-item { border-right: none; padding: 0 2rem; }
+    nav a:not(.nav-btn):not(:last-child) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="#" class="logo">
+    <svg class="logo-icon" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="22" cy="26" rx="16" ry="13" fill="#8B5E3C"/>
+      <ellipse cx="22" cy="25" rx="14" ry="11" fill="#A0703C"/>
+      <ellipse cx="22" cy="24" rx="12" ry="9" fill="#7a5230"/>
+      <circle cx="16" cy="22" r="2" fill="#5a3820" opacity="0.7"/>
+      <circle cx="26" cy="26" r="1.5" fill="#5a3820" opacity="0.6"/>
+      <circle cx="20" cy="28" r="1" fill="#5a3820" opacity="0.5"/>
+      <path d="M22 14 C22 14 19 8 14 9 C16 12 22 14 22 14Z" fill="#7ab648"/>
+      <path d="M22 14 C22 14 25 7 30 9 C28 12 22 14 22 14Z" fill="#5a9632"/>
+      <line x1="22" y1="14" x2="22" y2="17" stroke="#7ab648" stroke-width="1.5"/>
+    </svg>
+    <div class="logo-text">Rotten <span>Potatoes</span></div>
+  </a>
+  <nav>
+    <a href="#" class="active">Home</a>
+    <a href="#reviews">Songs &amp; TV</a>
+    <a href="#write-review" class="nav-btn">Write Review</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div>
+    <div class="hero-label">The honest take on pop culture</div>
+    <h1>Where good art gets <em>celebrated</em> and bad art gets buried.</h1>
+    <p>Rotten Potatoes publishes authentic reviews of songs and TV shows. No PR fluff. No paid placements. Just opinions — saved forever.</p>
+    <div class="hero-actions">
+      <a href="#reviews" class="btn-primary">Browse Reviews</a>
+      <a href="#write-review" class="btn-ghost">Submit a Review</a>
+    </div>
+  </div>
+  <div class="featured-card">
+    <div class="featured-img-placeholder">🎭</div>
+    <div class="featured-body">
+      <div class="card-type">📺 TV Show</div>
+      <div class="card-title">Rotten Potatoes</div>
+      <div class="card-meta">Your Reviews · Live · Forever</div>
+      <div class="card-excerpt">Every review submitted below is stored in the cloud and shared with anyone who visits this page. Be the first to add one.</div>
+      <span class="score-badge score-fresh">🥔 Powered by Firebase</span>
+    </div>
+  </div>
+</section>
+
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-number" id="stat-total">—</div><div class="stat-label">Reviews Published</div></div>
+  <div class="stat-item"><div class="stat-number" id="stat-songs">—</div><div class="stat-label">Songs Reviewed</div></div>
+  <div class="stat-item"><div class="stat-number" id="stat-tv">—</div><div class="stat-label">TV Shows Covered</div></div>
+  <div class="stat-item"><div class="stat-number" id="stat-avg">—</div><div class="stat-label">Avg Spud Score</div></div>
+</div>
+
+<div class="search-bar">
+  <div class="search-inner">
+    <input type="text" id="search-input" placeholder="Search for a song, artist, show..." oninput="handleSearch()">
+    <button class="search-btn">Search</button>
+  </div>
+</div>
+
+<section class="section-tabs" id="reviews">
+  <div class="tabs-header">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('all',this)">All</button>
+      <button class="tab" onclick="switchTab('song',this)">🎵 Songs</button>
+      <button class="tab" onclick="switchTab('tv',this)">📺 TV Shows</button>
+    </div>
+  </div>
+  <div class="cards-grid" id="cards-container">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span style="font-family:'Space Mono',monospace;font-size:0.75rem;letter-spacing:0.1em;">LOADING REVIEWS...</span>
+    </div>
+  </div>
+</section>
+
+<section class="write-review-section" id="write-review">
+  <h2 class="section-heading">Submit a <span>Review</span></h2>
+  <div class="write-form">
+    <div class="form-group">
+      <label>Title / Song Name *</label>
+      <input type="text" id="f-title" placeholder="e.g. Midnights, Shogun...">
+    </div>
+    <div class="form-group">
+      <label>Artist / Show *</label>
+      <input type="text" id="f-artist" placeholder="e.g. Taylor Swift, FX...">
+    </div>
+    <div class="form-group">
+      <label>Category *</label>
+      <select id="f-category">
+        <option value="">Select category</option>
+        <option value="song">🎵 Song</option>
+        <option value="tv">📺 TV Show</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Genre</label>
+      <input type="text" id="f-genre" placeholder="e.g. Pop, Drama, Hip-Hop...">
+    </div>
+    <div class="form-group">
+      <label>Your Name</label>
+      <input type="text" id="f-author" placeholder="e.g. A.V. Nonymous">
+    </div>
+    <div class="form-group">
+      <label>Tags (comma separated)</label>
+      <input type="text" id="f-tags" placeholder="e.g. Catchy, Binge-worthy">
+    </div>
+    <div class="form-group full">
+      <label>Your Review *</label>
+      <textarea id="f-text" placeholder="Write your honest take... What made it extraordinary? What fell flat?"></textarea>
+    </div>
+    <div class="score-slider-group">
+      <label>Spud Score</label>
+      <div class="slider-row">
+        <input type="range" id="f-score" min="0" max="100" value="70" oninput="updateScore(this.value)">
+        <div class="slider-value" id="score-display">70%</div>
+      </div>
+    </div>
+    <div class="form-submit">
+      <span class="submit-status" id="submit-status"></span>
+      <button class="btn-primary" id="submit-btn" onclick="submitReview()">Publish Review</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">Rotten <span>Potatoes</span></div>
+  <div class="footer-links">
+    <a href="#">About</a>
+    <a href="#">Guidelines</a>
+    <a href="#">Contact</a>
+  </div>
+  <div style="font-family:'Space Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;">© 2025 ROTTEN POTATOES</div>
+</footer>
+
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="m-title"></div>
+        <div class="modal-subtitle" id="m-subtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-score-row">
+        <div><div class="big-score" id="m-score"></div></div>
+        <div>
+          <div class="score-verdict" id="m-verdict"></div>
+          <div style="color:var(--muted);font-size:0.85rem;margin-top:0.3rem;" id="m-reviewer"></div>
+        </div>
+      </div>
+      <p class="modal-review-text" id="m-review"></p>
+      <div class="modal-tags" id="m-tags"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyBqqEf-QnFIW4v79jcrR5-n790J7Ul_EwA",
+    authDomain: "rotten-potatoes-b0cfe.firebaseapp.com",
+    projectId: "rotten-potatoes-b0cfe",
+    storageBucket: "rotten-potatoes-b0cfe.firebasestorage.app",
+    messagingSenderId: "895208847375",
+    appId: "1:895208847375:web:0f9f0fb32ab82424b14b7a"
+  });
+  const db = getFirestore(app);
+
+  let allReviews = [];
+  let activeTab = 'all';
+
+  // ── Helpers ───────────────────────────────────────
+  const scoreClass = s => s >= 70 ? 'high' : s >= 40 ? 'mid' : 'low';
+  const verdict = s => s >= 70 ? {label:'FRESH SPUD',cls:'fresh'} : s >= 40 ? {label:'HALF-BAKED',cls:'rotten'} : {label:'ROTTEN SPUD',cls:'rotten'};
+  const fmtDate = ts => {
+    if (!ts) return '';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('en-US', {month:'short', year:'numeric'});
+  };
+
+  // ── Render ────────────────────────────────────────
+  function renderCards() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    let list = activeTab === 'all' ? allReviews : allReviews.filter(r => r.type === activeTab);
+    if (q) list = list.filter(r => r.title.toLowerCase().includes(q) || r.artist.toLowerCase().includes(q) || (r.genre||'').toLowerCase().includes(q));
+
+    const container = document.getElementById('cards-container');
+    if (!list.length) {
+      container.innerHTML = `<div class="empty-state">NO REVIEWS YET — WRITE THE FIRST ONE ↓</div>`;
+      return;
+    }
+    container.innerHTML = list.map((r,i) => `
+      <div class="review-card" data-id="${r.id}" style="animation-delay:${i*0.06}s">
+        <div class="card-thumb ${r.type==='song'?'card-thumb-songs':'card-thumb-tv'}">
+          <span>${r.type==='song'?'🎵':'📺'}</span>
+          <div class="card-score score-${scoreClass(r.score)}">${r.score}%</div>
+        </div>
+        <div class="card-content">
+          <div class="card-type">${r.type==='song'?'🎵 Song':'📺 TV Show'}${r.genre?' · '+r.genre:''}</div>
+          <div class="card-title">${r.title}</div>
+          <div class="card-artist">${r.artist}</div>
+          <div class="card-reviewer">
+            <span class="reviewer-name">${r.reviewer||'Anonymous'}</span>
+            <span class="review-date">${fmtDate(r.createdAt)}</span>
+          </div>
+        </div>
+      </div>`).join('');
+    container.querySelectorAll('.review-card').forEach(c =>
+      c.addEventListener('click', () => openModal(c.dataset.id)));
+  }
+
+  function updateStats() {
+    const songs = allReviews.filter(r=>r.type==='song').length;
+    const tv = allReviews.filter(r=>r.type==='tv').length;
+    const avg = allReviews.length ? Math.round(allReviews.reduce((s,r)=>s+r.score,0)/allReviews.length) : 0;
+    document.getElementById('stat-total').textContent = allReviews.length || '0';
+    document.getElementById('stat-songs').textContent = songs || '0';
+    document.getElementById('stat-tv').textContent = tv || '0';
+    document.getElementById('stat-avg').textContent = avg ? avg+'%' : '—';
+  }
+
+  // ── Load ──────────────────────────────────────────
+  async function loadReviews() {
+    try {
+      const snap = await getDocs(query(collection(db,'reviews'), orderBy('createdAt','desc')));
+      allReviews = snap.docs.map(d => ({id:d.id,...d.data()}));
+      renderCards();
+      updateStats();
+    } catch(err) {
+      console.error(err);
+      document.getElementById('cards-container').innerHTML =
+        `<div class="empty-state">COULDN'T LOAD — MAKE SURE FIRESTORE IS IN TEST MODE</div>`;
+    }
+  }
+
+  // ── Submit ────────────────────────────────────────
+  window.submitReview = async function() {
+    const title  = document.getElementById('f-title').value.trim();
+    const artist = document.getElementById('f-artist').value.trim();
+    const type   = document.getElementById('f-category').value;
+    const genre  = document.getElementById('f-genre').value.trim();
+    const author = document.getElementById('f-author').value.trim();
+    const tags   = document.getElementById('f-tags').value.trim();
+    const text   = document.getElementById('f-text').value.trim();
+    const score  = parseInt(document.getElementById('f-score').value);
+
+    if (!title || !artist || !type || !text) { showToast('⚠️ Fill in all required fields.'); return; }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = 'Publishing...';
+
+    try {
+      await addDoc(collection(db,'reviews'), {
+        title, artist, type, genre, score,
+        reviewer: author || 'Anonymous',
+        excerpt: text,
+        tags: tags ? tags.split(',').map(t=>t.trim()).filter(Boolean) : [],
+        createdAt: serverTimestamp()
+      });
+      ['f-title','f-artist','f-genre','f-author','f-tags','f-text'].forEach(id => document.getElementById(id).value='');
+      document.getElementById('f-category').value='';
+      document.getElementById('f-score').value=70;
+      document.getElementById('score-display').textContent='70%';
+      showToast('✓ Review published!');
+      await loadReviews();
+      document.getElementById('reviews').scrollIntoView({behavior:'smooth'});
+    } catch(err) {
+      console.error(err);
+      showToast('❌ Failed — check Firestore rules.');
+    } finally {
+      btn.disabled=false; btn.textContent='Publish Review';
+    }
+  };
+
+  // ── Modal ─────────────────────────────────────────
+  window.openModal = function(id) {
+    const r = allReviews.find(x=>x.id===id); if(!r) return;
+    const v = verdict(r.score);
+    document.getElementById('m-title').textContent = r.title;
+    document.getElementById('m-subtitle').textContent = `${r.artist}${r.genre?' · '+r.genre:''}`;
+    document.getElementById('m-score').textContent = r.score+'%';
+    document.getElementById('m-score').className = 'big-score '+v.cls;
+    document.getElementById('m-verdict').textContent = v.label;
+    document.getElementById('m-verdict').className = 'score-verdict '+v.cls;
+    document.getElementById('m-reviewer').textContent = `Reviewed by ${r.reviewer||'Anonymous'} · ${fmtDate(r.createdAt)}`;
+    document.getElementById('m-review').textContent = r.excerpt;
+    document.getElementById('m-tags').innerHTML = (r.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
+    document.getElementById('modal').classList.add('open');
+    document.body.style.overflow='hidden';
+  };
+  window.closeModal = e => { if(e.target===document.getElementById('modal')) closeModalDirect(); };
+  window.closeModalDirect = () => { document.getElementById('modal').classList.remove('open'); document.body.style.overflow=''; };
+
+  // ── Tabs / Search / Score ─────────────────────────
+  window.switchTab = (tab, el) => {
+    activeTab = tab;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    renderCards();
+  };
+  window.handleSearch = renderCards;
+  window.updateScore = v => document.getElementById('score-display').textContent = v+'%';
+
+  // ── Toast ─────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 3000);
+  }
+
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeModalDirect(); });
+  loadReviews();
+</script>
+</body>
+</html>
