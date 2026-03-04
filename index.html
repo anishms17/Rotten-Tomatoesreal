@@ -167,6 +167,7 @@
   .big-score.rotten { color: var(--fresh); }
   .score-verdict { font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; }
   .score-verdict.fresh { color: var(--rot); }
+  .score-verdict.mid { color: #c8a020; }
   .score-verdict.rotten { color: var(--fresh); }
   .modal-review-text { color: var(--muted); line-height: 1.8; font-size: 0.95rem; margin-bottom: 1.5rem; }
   .modal-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -516,32 +517,61 @@
 
   async function fetchMusicImage(title, artist) {
     const key = `${title}-${artist}`;
-    if (imgCache[key]) return imgCache[key];
+    if (imgCache[key] !== undefined) return imgCache[key];
+    imgCache[key] = null; // prevent duplicate requests
     try {
       const q = encodeURIComponent(`${title} ${artist}`);
-      const res = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&limit=1`);
+      const res = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=3`, {mode:'cors'});
+      if (!res.ok) throw new Error('itunes fail');
       const data = await res.json();
-      if (data.results && data.results[0]) {
-        const url = data.results[0].artworkUrl100.replace('100x100', '300x300');
-        imgCache[key] = url;
-        return url;
+      if (data.results && data.results.length > 0) {
+        const url = (data.results[0].artworkUrl100 || '').replace('100x100bb', '400x400bb');
+        imgCache[key] = url || null;
+        return imgCache[key];
       }
-    } catch(e) {}
+    } catch(e) {
+      // fallback: try MusicBrainz cover art
+      try {
+        const q = encodeURIComponent(`${artist} ${title}`);
+        const res2 = await fetch(`https://musicbrainz.org/ws/2/recording/?query=${q}&limit=1&fmt=json`);
+        const d2 = await res2.json();
+        if (d2.recordings && d2.recordings[0] && d2.recordings[0].releases && d2.recordings[0].releases[0]) {
+          const mbid = d2.recordings[0].releases[0].id;
+          const res3 = await fetch(`https://coverartarchive.org/release/${mbid}/front-250`);
+          if (res3.ok) { imgCache[key] = res3.url; return res3.url; }
+        }
+      } catch(e2) {}
+    }
     return null;
   }
 
   async function fetchTVImage(title) {
     const key = `tv-${title}`;
-    if (imgCache[key]) return imgCache[key];
+    if (imgCache[key] !== undefined) return imgCache[key];
+    imgCache[key] = null;
     try {
       const q = encodeURIComponent(title);
       const res = await fetch(`https://api.tvmaze.com/singlesearch/shows?q=${q}`);
+      if (!res.ok) throw new Error('tvmaze fail');
       const data = await res.json();
-      if (data && data.image && data.image.medium) {
-        imgCache[key] = data.image.medium;
-        return data.image.medium;
+      if (data && data.image) {
+        const url = (data.image.original || data.image.medium || null);
+        imgCache[key] = url;
+        return url;
       }
-    } catch(e) {}
+    } catch(e) {
+      // fallback: TVmaze search endpoint
+      try {
+        const q = encodeURIComponent(title);
+        const res2 = await fetch(`https://api.tvmaze.com/search/shows?q=${q}`);
+        const d2 = await res2.json();
+        if (d2 && d2.length > 0 && d2[0].show && d2[0].show.image) {
+          const url = d2[0].show.image.original || d2[0].show.image.medium || null;
+          imgCache[key] = url;
+          return url;
+        }
+      } catch(e2) {}
+    }
     return null;
   }
 
@@ -553,7 +583,13 @@
 
   // ── Helpers ────────────────────────────────────────
   const scoreClass = s => s >= 70 ? 'high' : s >= 40 ? 'mid' : 'low';
-  const verdict = s => s >= 70 ? {label:'FRESH SPUD',cls:'fresh'} : s >= 40 ? {label:'HALF-BAKED',cls:'rotten'} : {label:'ROTTEN SPUD',cls:'rotten'};
+  const verdict = s => {
+    if (s >= 90) return {label:'🥔 Golden Spud!',    cls:'fresh',  short:'Golden!'};
+    if (s >= 70) return {label:'🟢 Fresh!',           cls:'fresh',  short:'Fresh!'};
+    if (s >= 50) return {label:'🟡 Half-Baked',       cls:'mid',    short:'Meh'};
+    if (s >= 30) return {label:'🟠 Going Rotten',     cls:'rotten', short:'Rotten'};
+    return              {label:'💀 Totally Rotten',   cls:'rotten', short:'Trash'};
+  };
   const fmtDate = ts => {
     if (!ts) return '';
     const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -591,6 +627,9 @@
           <div class="card-type">${r.type==='song'?'🎵 Song':'📺 TV Show'}${r.genre?' · '+r.genre:''}</div>
           <div class="card-title">${r.title}</div>
           <div class="card-artist">${r.artist}</div>
+          <div style="margin-bottom:0.5rem;">
+            <span class="score-verdict ${verdict(r.score).cls}" style="font-size:0.7rem;letter-spacing:0.08em;">${verdict(r.score).label}</span>
+          </div>
           <div class="card-reviewer">
             <span class="reviewer-name">${r.reviewer||'Anonymous'}</span>
             <span class="review-date">${fmtDate(r.createdAt)}</span>
